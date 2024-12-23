@@ -21,7 +21,12 @@ void* find_unused_memory(const Elf64_Phdr* phdr, int phnum) {
 
 void* mmap_above(void* addr, uint64_t size) {
     void* ptr = s_mmap(addr, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+
+    if(ptr == (void*)0) return ptr;
+
     while((uint64_t)ptr < (uint64_t)addr) {
+        // page aligned...
+        addr -= ((uint64_t)addr % 0x1000);
         addr += 0x1000;
         ptr = s_mmap(addr, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     }
@@ -29,7 +34,7 @@ void* mmap_above(void* addr, uint64_t size) {
 }
 
 
-void* copy_chunk(char* restrict dest, const char* restrict src, uint64_t size) {
+void copy_chunk(char* restrict dest, const char* restrict src, uint64_t size) {
     //I love premature optimization <3
     while(size >= 32) {
         uint64_t* restrict d = (uint64_t* restrict)dest;

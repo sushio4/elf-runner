@@ -63,6 +63,7 @@ static uint64_t s_pread64(uint64_t fd, const void* dest, uint64_t n, uint64_t of
 #define MAP_SHARED 0x01
 #define MAP_PRIVATE 0x02
 #define MAP_ANONYMOUS 0x20
+#define MAP_FIXED 0x10
 
 static void* s_mmap(void* addr, uint64_t len, uint64_t prot, uint64_t flags, uint64_t fd, uint64_t pgoff) {
     asm(
@@ -73,7 +74,15 @@ static void* s_mmap(void* addr, uint64_t len, uint64_t prot, uint64_t flags, uin
     );
 }
 
-static void s_unmap(void* addr, uint64_t len) {
+static int s_mprotect(void* addr, uint64_t len, uint64_t prot) {
+    asm(
+        "xor    %%rax, %%rax\n"
+        "movb   $10, %%al\n"
+        "syscall\n"::
+    );
+}
+
+static int s_unmap(void* addr, uint64_t len) {
     asm(
         "xor    %%rax, %%rax\n"
         "movb   $11, %%al\n"

@@ -36,17 +36,38 @@ int _runner_start(int argc, char** argv) {
 
     //load the code to the memory the program won't use
     //then execute from there
+
     void* free_memory = find_unused_memory(phdr, ehdr->e_phnum);
+
+    #ifdef DEBUG
+    t_puts("free memory available at: ");
+    t_hexprint((uint64_t)free_memory);
+    t_puts("\n");
+    #endif
 
     uint64_t load_code_size = (char*)&load_code_end - (char*)&load_code_start;
     void* loaded_code = mmap_above(free_memory, load_code_size);
+
+    if(loaded_code == nullptr) {
+        t_puts("Could not allocate memory there! ToT \n");
+        s_exit(1);
+    }
+
     copy_chunk(loaded_code, (char*)&load_code_start, load_code_size);
 
-    void (*code_ptr)(int argc, char** argv);
-    uint64_t offset = (uint64_t)((char*)main_loaded - (char*)load_code_start);
-    code_ptr = (void (*)(int, char**))((char*)loaded_code + offset);
+    void* free_chunk = (char*)loaded_code + load_code_size;
 
-    code_ptr(argc, argv);
+    void (*loaded_entry)(int, char**, void*);
+    uint64_t offset = (uint64_t)((char*)main_loaded - (char*)load_code_start);
+    loaded_entry = (void (*)(int, char**, void*))((char*)loaded_code + offset);
+
+    #ifdef DEBUG
+    t_puts("Loaded code addr: ");
+    t_hexprint((uint64_t)loaded_code);
+    t_puts("\n");
+    #endif
+
+    loaded_entry(argc, argv, free_chunk);
     return 0;
 }
 
