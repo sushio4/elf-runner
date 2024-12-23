@@ -85,7 +85,7 @@ void s_unmap(void* addr, uint64_t len) {
 #define O_WRONLY	     01
 #define O_RDWR		     02
 
-uint64_t s_open(const char* fname, uint64_t flags) {
+int s_open(const char* fname, uint64_t flags) {
     asm(
         "xor    %%rax, %%rax\n"
         "movb   $2, %%al\n"

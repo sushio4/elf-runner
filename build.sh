@@ -1,2 +1,2 @@
-gcc main.c -o elf-runner -nostdlib --entry=_start
+gcc main.c -o elf-runner -nostdlib --entry=_prog_start -fPIC -fno-inline -fno-reorder-blocks -O0
 gcc test.c -o test-elf-runner

@@ -11,12 +11,18 @@ int _runner_start(int argc, char** argv) {
         return 1;        
     }
     int fd = s_open(argv[1], O_RDONLY);
+
+    if(fd < 0) {
+        t_puts("File does not exist!\n");
+        return 1;
+    }
+
     uint64_t file_size = t_fsize(fd);
     char* file = s_mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
 
     Elf64_Ehdr* ehdr = (Elf64_Ehdr*)file;
 
-    if(*(uint32_t*)file != 0x464C4574) {
+    if(*(uint32_t*)file != 0x464C457f) {
         t_puts("File is not an ELF!\n");
         return 2;
     }
@@ -44,6 +50,10 @@ int _runner_start(int argc, char** argv) {
     return 0;
 }
 
-void _start(int argc, char** argv) {
-    s_exit(_runner_start(argc, argv));
+void _prog_start() {
+    uint64_t* sp = nullptr;
+    asm( "mov %%rbp, %0" : "=rm" (sp) );
+    //inc because old rbp is on the stack
+    sp++;
+    s_exit(_runner_start(*sp, (char**)(sp+1)));
 }
