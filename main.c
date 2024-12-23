@@ -1,6 +1,6 @@
 #include "syscalls.h"
 #include "tinylib.h"
-// #include "utils.h"
+#include "utils.h"
 #include <elf.h>
 
 #include "loaded_code.h"
