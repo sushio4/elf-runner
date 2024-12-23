@@ -8,7 +8,7 @@
 
 
 int t_strlen(const char * str) {
-    if(str == nullptr) return -1;
+    if(str == nullptr) return 0;
     int len = 0;
     while(*str++) {
         len++;
@@ -19,6 +19,21 @@ int t_strlen(const char * str) {
 int t_puts(const char * str) {
     if(str == nullptr) return 0;
     return s_write(STDOUT, str, t_strlen(str));
+}
+
+// str HAS TO HAVE AT LEAST 17 BYTES ALLOCATED!
+void t_int_to_str(uint64_t val, char* str) {
+    str[16] = '\0';
+    char lookup[] = "0123456789ABCDEF";
+    for(char* p = str+15; p >= str; val>>=4, p--) {
+        *p = lookup[val & 0xF];
+    }
+}
+
+void t_hexprint(uint64_t val) {
+    char num[17];
+    t_int_to_str(val, num);
+    s_write(STDOUT, num, 16);
 }
 
 uint64_t t_fsize(int fd) {
