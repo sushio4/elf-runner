@@ -1,6 +1,6 @@
 #include "syscalls.h"
 #include "tinylib.h"
-#include "utils.h"
+// #include "utils.h"
 #include <elf.h>
 
 #include "loaded_code.h"
@@ -36,6 +36,11 @@ int _runner_start(int argc, char** argv) {
     void* loaded_code = mmap_above(free_memory, load_code_size);
     copy_chunk(loaded_code, (char*)&load_code_start, load_code_size);
 
+    void (*code_ptr)(int argc, char** argv);
+    uint64_t offset = (uint64_t)((char*)main_loaded - (char*)load_code_start);
+    code_ptr = (void (*)(int, char**))((char*)loaded_code + offset);
+
+    code_ptr(argc, argv);
     return 0;
 }
 
