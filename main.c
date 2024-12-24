@@ -39,6 +39,9 @@ int _runner_start(int argc, char** argv) {
 
     void* free_memory = find_unused_memory(phdr, ehdr->e_phnum);
 
+    s_unmap(file, file_size);
+    s_close(fd);
+
     #ifdef DEBUG
     t_puts("free memory available at: ");
     t_hexprint((uint64_t)free_memory);

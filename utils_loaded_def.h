@@ -2,6 +2,7 @@
 #include "syscalls.h"
 #include "utils_loaded.h"
 
+#define prnt(STR) {char s[] = (STR); puts(s);}
 
 static int strlen(const char * str) {
     if(str == nullptr) return 0;
@@ -38,6 +39,8 @@ static void* mmap_above(void* addr, uint64_t size, uint64_t prot, uint64_t flags
     
     void* ptr = s_mmap(addr, size, prot, flags, fd, pgoff);
     while((uint64_t)ptr < (uint64_t)addr) {
+        addr -= (uint64_t)addr % 0x1000;
+        
         if(ptr != (void*)0)
             s_unmap(ptr, size);
 
@@ -74,6 +77,10 @@ static void copy_chunk(char* restrict dest, const char* restrict src, uint64_t s
 }
 
 static void load_program(Elf64_Phdr* phdr, int phnum, char* file) {
+    #ifdef DEBUG
+    prnt("Loading program...\n");
+    #endif
+
     for(int i = 0; i < phnum; i++) {
         if(phdr[i].p_type != PT_LOAD) continue;
 
