@@ -56,6 +56,19 @@ static uint64_t s_pread64(uint64_t fd, const void* dest, uint64_t n, uint64_t of
     );
 }
 
+#define ARCH_SET_GS			0x1001
+#define ARCH_SET_FS			0x1002
+#define ARCH_GET_FS			0x1003
+#define ARCH_GET_GS			0x1004
+
+static uint64_t s_arch_prctl(uint64_t option, uint64_t arg2) {
+    asm(
+        "xor    %%rax, %%rax\n"
+        "movb   $158, %%al\n"
+        "syscall\n"::
+    );
+}
+
 #define PROT_READ 0x01
 #define PROT_WRITE 0x02
 #define PROT_EXEC 0x04

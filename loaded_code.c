@@ -26,7 +26,7 @@ void main_loaded(int argc, char** argv, void* free_chunk) {
     Elf64_Ehdr* ehdr = (Elf64_Ehdr*)file;
     Elf64_Phdr* phdr = (Elf64_Phdr*)(file + ehdr->e_phoff);
 
-    load_program(phdr, ehdr->e_phnum, file);
+    uint64_t fs = load_program(phdr, ehdr->e_phnum, file);
 
     s_unmap(free_chunk, fsize(fd));
     s_close(fd);
@@ -39,11 +39,37 @@ void main_loaded(int argc, char** argv, void* free_chunk) {
     void (*entry)(void) = (void (*)(void))(ehdr->e_entry);
 
     argv[0] = (char*)(uint64_t)(argc-1);
+
+    if(fs != 0) {
+        uint64_t ret = s_arch_prctl(ARCH_SET_FS, fs);
+        //check
+        uint64_t new_fs = 0;
+        s_arch_prctl(ARCH_GET_FS, (uint64_t)&new_fs);
+        if(ret != 0 || new_fs != fs) {
+            prnt("Could not update fs reg!\n");
+            s_exit(1);
+        }
+    }
     
-    asm(
+    asm (
         "mov    %0, %%rax\n"
         "mov    %1, %%rsp\n"
-        "jmp    *%%rax"
+        "xor    %%rbx, %%rbx\n"
+        "xor    %%rcx, %%rcx\n"
+        "xor    %%rsi, %%rsi\n"
+        "xor    %%rdi, %%rdi\n"
+        "xor    %%rbp, %%rbp\n"
+        "xor    %%r8, %%r8\n"
+        "xor    %%r9, %%r9\n"
+        "xor    %%r10, %%r10\n"
+        "xor    %%r11, %%r11\n"
+        "xor    %%r12, %%r12\n"
+        "xor    %%r13, %%r13\n"
+        "xor    %%r14, %%r14\n"
+        "xor    %%r15, %%r15\n"
+        "push   %%rax\n"
+        "xor    %%rax, %%rax\n"
+        "ret\n"
         :: "rm" (entry), "rm" (argv)
     );
 
