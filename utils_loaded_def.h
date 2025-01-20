@@ -81,19 +81,7 @@ static uint64_t load_program(Elf64_Phdr* phdr, int phnum, char* file) {
     prnt("Loading program...\n");
     #endif
 
-    uint64_t fs = 0;
-    #ifdef DEBUG
-    uint64_t tls_off = 0;
-    #endif
-
     for(int i = 0; i < phnum; i++) {
-        if(phdr[i].p_type == PT_TLS) {
-            fs = phdr[i].p_vaddr + phdr[i].p_memsz;
-            #ifdef DEBUG
-            tls_off = -phdr[i].p_memsz;
-            #endif
-            continue;
-        }
         if(phdr[i].p_type != PT_LOAD) continue;
 
         //addr alignment
@@ -167,21 +155,5 @@ static uint64_t load_program(Elf64_Phdr* phdr, int phnum, char* file) {
         #endif
     }
 
-    if(fs != 0) {
-        // load tls struct
-        tcbhead_t t = {};
-        t.tcb = (void*)fs;
-        t.self = (void*)fs;
-
-        *(tcbhead_t*)fs = t;
-        #ifdef DEBUG
-        prnt("TLS loaded, fs: ");
-        hexprint(fs);
-        prnt("\nTLS begin: ");
-        hexprint(fs + tls_off);
-        prnt("\n");
-        #endif
-    }
-
-    return fs;
+    return 0;
 }

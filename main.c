@@ -34,10 +34,42 @@ int _runner_start(int argc, char** argv) {
 
     Elf64_Phdr* phdr = (Elf64_Phdr*)(file + ehdr->e_phoff);
 
+    // find where the file ends and set brk
+    // but only if pt_tls
+    int tls = 0;
+    uint64_t brk = 0;
+    for(int i = 0; i < ehdr->e_phnum; i++) {
+        if(phdr[i].p_type == PT_TLS) tls = 1;
+        if(phdr[i].p_type != PT_LOAD) continue;
+        
+        if(brk < phdr[i].p_vaddr + phdr[i].p_memsz) {
+
+            brk = phdr[i].p_vaddr + phdr[i].p_memsz;
+
+            if(brk % phdr[i].p_align) {
+                brk -= brk % phdr[i].p_align;
+                brk += phdr[i].p_align;
+            }
+        }
+    }
+    
+    if(tls) {
+        uint64_t ret = s_brk((void*)brk);
+        if(ret != brk) {
+            t_puts("Could not brk\ncurrent brk:\n");
+            t_hexprint(ret);
+            t_puts("\nDesired brk:\n");
+            t_hexprint(brk);
+            t_puts("\n");
+            s_exit(1);
+        }
+    }
+
     //load the code to the memory the program won't use
     //then execute from there
 
     void* free_memory = find_unused_memory(phdr, ehdr->e_phnum);
+    free_memory += 0x800000;
 
     s_unmap(file, file_size);
     s_close(fd);

@@ -131,6 +131,14 @@ static uint64_t s_close(int fd) {
     );
 }
 
+static uint64_t s_brk(void* addr) {
+    asm(
+        "xor    %%rax, %%rax\n"
+        "movb   $12, %%al\n"
+        "syscall\n"::
+    );
+}
+
 //uint64_t s_lseek(int fd, int off, int whence) {
 //    asm(
 //        "xor    %%rax, %%rax\n"

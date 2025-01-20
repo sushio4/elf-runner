@@ -16,7 +16,8 @@ void main_loaded(int argc, char** argv, void* free_chunk) {
         s_exit(1);
     }
     
-    char* file = mmap_above(free_chunk, fsize(fd), PROT_READ, MAP_PRIVATE, fd, 0);
+    int fsz = fsize(fd);
+    char* file = mmap_above(free_chunk, fsz, PROT_READ, MAP_PRIVATE, fd, 0);
     
     if(file == nullptr) {
         prnt("Could not load file :/\n");
@@ -26,9 +27,9 @@ void main_loaded(int argc, char** argv, void* free_chunk) {
     Elf64_Ehdr* ehdr = (Elf64_Ehdr*)file;
     Elf64_Phdr* phdr = (Elf64_Phdr*)(file + ehdr->e_phoff);
 
-    uint64_t fs = load_program(phdr, ehdr->e_phnum, file);
+    load_program(phdr, ehdr->e_phnum, file);
 
-    s_unmap(free_chunk, fsize(fd));
+    s_unmap(free_chunk, fsz);
     s_close(fd);
 
     #ifdef DEBUG
@@ -39,17 +40,6 @@ void main_loaded(int argc, char** argv, void* free_chunk) {
     void (*entry)(void) = (void (*)(void))(ehdr->e_entry);
 
     argv[0] = (char*)(uint64_t)(argc-1);
-
-    if(fs != 0) {
-        uint64_t ret = s_arch_prctl(ARCH_SET_FS, fs);
-        //check
-        uint64_t new_fs = 0;
-        s_arch_prctl(ARCH_GET_FS, (uint64_t)&new_fs);
-        if(ret != 0 || new_fs != fs) {
-            prnt("Could not update fs reg!\n");
-            s_exit(1);
-        }
-    }
     
     asm (
         "mov    %0, %%rax\n"
@@ -72,8 +62,6 @@ void main_loaded(int argc, char** argv, void* free_chunk) {
         "ret\n"
         :: "rm" (entry), "rm" (argv)
     );
-
-    // entry();
 
     s_exit(0);
 }
