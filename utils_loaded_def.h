@@ -83,6 +83,8 @@ static uint64_t load_program(Elf64_Phdr* phdr, int phnum, char* file) {
 
     for(int i = 0; i < phnum; i++) {
         if(phdr[i].p_type != PT_LOAD) continue;
+        
+        if(phdr[i].p_memsz == 0) continue;
 
         //addr alignment
         uint64_t addr = phdr[i].p_vaddr;

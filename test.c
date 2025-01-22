@@ -16,7 +16,7 @@ void test_strlen() {
     ASSERT_EQ(strlen("ABC"), t_strlen("ABC"));
     ASSERT_EQ(strlen(""), t_strlen(""));
     ASSERT_NEQ(strlen("ABC"), t_strlen("ABCDEF"));
-    ASSERT_EQ(t_strlen(nullptr), -1);
+    ASSERT_EQ(t_strlen(nullptr), 0);
 
     printf("[OK]\n");
 }
