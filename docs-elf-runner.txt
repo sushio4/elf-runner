@@ -1,0 +1,155 @@
++------------------------------------------+
+| USE MONOSPACE FONT TO SEE THE ASCII ART! |
++------------------------------------------+----------------------------------------------------------------+
+|                                                                                                           |
+|   _______ ___     _______          ________ ___  ___ _____   ___ _____   ___ _______ ________             |
+|  |\   ___\\  \   |\   ___\        |\   __  \\  \|\  \\    \_|\  \\    \_|\  \\   ___\\   __  \            |
+|  \ \  \__|_\  \  \ \  \__|_  _____\ \  \_\  \\  \ \  \\  \_ \_\  \\  \_ \_\  \\  \__|_\  \_\  \           |
+|   \ \   ___\\  \  \ \   ___\|\____\\ \   __ <.\  \ \  \\  \\_ \\  \\  \\_ \\  \\   ___\\   __ <.          |
+|    \ \  \__|_\  \__\_\  \__|\|____| \ \  \|\  \\  \_\  \\  \ \_ \  \\  \ \_ \  \\  \__|_\  \|\  \         |
+|     \ \______\\______\\__\           \ \__\ \__\`._____| \__\_ \____\\__\_ \____\\______\\__\ \__\        |
+|      \|______||______||__|            \|__|\|__|`|_____|\|__| \|____||__| \|____||______||__|\|__|        |
+|                                                                                                           |
+|                                                                                                           |
+|  ;###### ;## ;##   ;###  :##   :####.  :#### ;## ;#####     ;##     :#### ;## ;##  :#### ;## ;## ;##      |
+|  `:##':##`:##`:##  `:####:###  :##':## :##'' `:##`:##''     `:##    :#''' `:##`:## :##'' `:##`:##`:##     |
+|   `:##### `':###'   `:##'##:## :#######`:##   `:##`:#####    `:##   `:####.`:##`:##`:####.`:####. `:##    |
+|    `:##':## `:##     `:##''`:##`:##'':##`:##.  `:##`:##''  ;##`:##   `'''"##`:##`:##`'''"##`:##'"##`:##   |
+|     `:#####  `:##     `:##  `:##`:## `:##`':####`:##`:#####`':##''     ;#### `':##''  ;####'`:## :##`:##  |
+|      `'''''   `''      `''   `'' `'   `''  `'''' `'' `'''''  `''       `''''   `''    `''''  `'' `'' `''  |
+|                                                                                                           |
++-----------------------------------------------------------------------------------------------------------+
+|                                                                                                           |
+| 1. Introduction                                                                                           |
+|                                                                                                           |
+| Elf-runner is a university project with aim to be able to load and run ELF binaries                       |
+| without using exec() family of system calls. Ironically, elf-runner is also an ELF                        |
+| executable that needs to be loaded and run and bash uses exec() calls.                                    |
+|                                                                                                           |
++-----------------------------------------------------------------------------------------------------------+
+|                                                                                                           |
+| 2. Requirements                                                                                           |
+|                                                                                                           | 
+| One important thing to mention is that the project technically stated I cannot use                        | 
+| system calls in general, but that is simply impossible. Without any syscalls                              |
+| the program cannot even open a file, allocate memory, or even exit, so the only thing                     |
+| that such a program could do, is segfault. That is precisely why I kind of made up                        |
+| some of the requirements myself. Here they are:                                                           |
+|                                                                                                           |
+|     - Linux program (x86_64, cli)                                                                         |
+|     - Ability to run statically linked programs                                                           | 
+|     - No exec() syscalls                                                                                  |
+|     - No fork() syscalls                                                                                  |
+|     - Pure C & asm                                                                                        |
+|     - No external libraries                                                                               |
+|     - No standard libraries (aside from struct defs)                                                      | 
+|     - Not even C runtime                                                                                  |
+|                                                                                                           |             
++-----------------------------------------------------------------------------------------------------------+
+|                                                                                                           |
+| 3. Used software                                                                                          |
+|                                                                                                           |
+| I really only used the most basic software (aside from my text editor) to complete                        |
+| the project, because I really wanted to keep the low-level and "bare bones" aspect.                       |
+|                                                                                                           |
+|     - GCC (cpp, cc1, as, ld)                                                                              |
+|     - VSCode (with Vim extension)                                                                         |
+|     - Vim                                                                                                 |
+|     - GDB                                                                                                 |
+|     - Bash, zsh                                                                                           |
+|     - other standard linux programs                                                                       |
+|                                                                                                           |
+| Oh, and a browser to spend countless minutes on stack overflow...                                         |
+|                                                                                                           |
++-----------------------------------------------------------------------------------------------------------+
+|                                                                                                           |
+| 4. Principle of operation                                                                                 |
+|                                                                                                           |
+| For clarity, from now on "loader" will refer to elf-runner and "loadee" will                              |
+| refer to the program being loaded and run by the loader.                                                  |
+|                                                                                                           |
+|     a) Address space                                                                                      |
+|                                                                                                           |
+|     The program aims to behave similar to exec(), which means that loader and loadee                      |
+|     share the same address space, no additional process is spawned and loadee's                           |
+|     image overwrites loader's.                                                                            |
+|                                                                                                           |
+|     Some programs expect to be loaded at specific addresses so we have to make sure                       |
+|     none of the elf-runner's segments overlap with loadee's in any way.                                   |
+|     The method used here is as follows:                                                                   |
+|                                                                                                           |
+|        - Loader reads loadee's elf file to check where all the segments will reside                       |
+|          in memory.                                                                                       |
+|        - Loader finds the first address above all the segments                                            |
+|        - It loads the rest of itself somewhere above that address                                         |
+|        - Control is passed to the newly loaded loader's code                                              |
+|                                                                                                           |
+|     b) Loading                                                                                            |
+|                                                                                                           |
+|     The process of loading is quite straightforward. Preventively, the memory for                         |
+|     all the segments of PT_LOAD type is munmap()'ed, after which it is mapped,                            |
+|     the contents are copied and mprotect with suitable arguments is called.                               |
+|                                                                                                           |
+|     c) The stack                                                                                          |
+|                                                                                                           | 
+|     Since at the beginning of execution, argc and argv[] are on top of the stack,                         |
+|     it would make sense to set %rsp to argv. However, in order to set up all the                          |
+|     registers properly, we put loadee's entry point on top of the stack in order                          |
+|     to be able to simply ret to the loadee without worrying about clobbered                               |
+|     registers or self-modifying code (although this would be fun).                                        |
+|                                                                                                           |
++-----------------------------------------------------------------------------------------------------------+
+|                                                                                                           |
+| 5. Caveats                                                                                                |
+|                                                                                                           |
+| Of course there are some caveats. First and foremost, we must tell the kernel                             |
+| that allocating memory at 0x0 address is perfectly fine as such:                                          |
+|                                                                                                           |
+|     sysctl vm.mmap_min_addr=0                                                                             |
+|                                                                                                           |
+| or:                                                                                                       |
+|                                                                                                           |
+|     echo 0 > /proc/sys/vm/mmap_min_addr                                                                   |
+|                                                                                                           |
+| Besides that, ASLR can mess up some things pretty badly, so the next                                      |
+| thing to do is turn it off:                                                                               |
+|                                                                                                           |
+|     sysctl kernel/randomize_va_space=0                                                                    |
+|                                                                                                           |
+| or                                                                                                        |
+|                                                                                                           |
+|     echo 0 > /proc/sys/kernel/randomize_va_space                                                          |
+|                                                                                                           |
+| Either way, root privileges will be necessary, as ASLR is a pretty important                              |
+| security feature.                                                                                         |
+| Okay, so why exactly do we need it off? Because of the TLS. No, not the SSL.                              |
+| TLS as in Thread Local Storage. This is what kept me from finishing this project                          |
+| for so long.                                                                                              |
+|                                                                                                           |
+| It turns out libc still uses brk() instead of newer and better mmap() and                                 |
+| it expects program break to be in a specific place when setting up the TLS,                               |
+| otherwise it will just segfault after some operation on %fs register,                                     |
+| which is not trivial to debug. That is why loader has to artificially set up                              |
+| program break in the exact location libc wants it to be if PT_TLS is present                              |
+| in the program header table. Before that, loader could run itself,                                        |
+| but not even hello world in C.                                                                            |
+|                                                                                                           |
++-----------------------------------------------------------------------------------------------------------+
+|                                                                                                           |
+| 6. Results                                                                                                |
+|                                                                                                           |
+| According to the tests, the resulting binary executable, elf-runner is able to execute itself,            |
+| statically linked programs written in C as well as in C++ using standard libraries.                       |
+| It even worked with ELF files infected by my own self-encrypting virus.                                   |
+|                                                                                                           |
+| Currently running dynamically linked binaries are not supported. Future versions might also               |
+| load a dynamic linker from PT_INTERP along the loadee and execute it in order to be able to               |
+| fully support the execution of dynamic executables.                                                       |
+|                                                                                                           |
+| This proof of concept really proved a concept, which is in itself quite intriguing, as                    |
+| executing programs, one of the most basic and important things the operating system has to do,            |
+| is possible entirely in the user land.                                                                    |
+| It almost begs the question, how could one use this as a detection evasion technique                      |
+| in some kind of malware. Some kind of reverse shell not detectable by exec syscall catching?              |
+|                                                                                                           |
++-----------------------------------------------------------------------------------------------------------+
